@@ -66,17 +66,51 @@
 </body>
 <script>
   (function() {
+    // 1. 获取 URL 中的参数
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('code');
+    const isWechat = /MicroMessenger/i.test(navigator.userAgent);
 
-    // 如果没有 code，且在微信环境中，则跳转授权
-    if (!code && /MicroMessenger/i.test(navigator.userAgent)) {
-      const appid = 'wx5d4ebaabb750dae1'; // 你的 appID
-      const redirectUri = encodeURIComponent(window.location.href);
-      const scope = 'snsapi_userinfo';
+    // 2. 检查本地会话缓存是否已标记为“已登录”
+    // sessionStorage 仅在当前标签页有效，关闭页面后会重置
+    const hasLoggedIn = sessionStorage.getItem('wechat_auth_status');
 
-      window.location.href = `https://open.weixin.qq.com/connect/oauth2/authorize?appid=${appid}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}&state=STATE#wechat_redirect`;
+    // 3. 核心逻辑判断
+    if (!isWechat) {
+        // 如果不是微信环境，middleware.ts 通常会拦截
+        // 但前端也可以作为二道防线进行提示
+        console.log("请在微信客户端打开");
+        return;
     }
-  })();
+
+    if (code) {
+        // 场景 A：刚从微信授权页跳回，URL 带着 code
+        // 此时我们标记状态为“已登录”，并存入缓存
+        sessionStorage.setItem('wechat_auth_status', 'true');
+        
+        // 可选：为了让 URL 变干净，可以利用 history API 去掉 code 参数
+        const newUrl = window.location.origin + window.location.pathname;
+        window.history.replaceState({}, Array.from(urlParams).entries(), newUrl);
+        
+        console.log("微信授权成功，已记录会话状态");
+
+    } else if (!hasLoggedIn) {
+        // 场景 B：在微信内打开，URL 没 code，且缓存里也没登录标记
+        // 这说明是真正意义上的“第一次进入”，需要发起授权跳转
+        const appid = 'wx5d4ebaabb750dae1'; //
+        const redirectUri = encodeURIComponent(window.location.href);
+        const scope = 'snsapi_userinfo';
+        
+        // 构造 OAuth 2.0 授权链接
+        const authUrl = `https://open.weixin.qq.com/connect/oauth2/authorize?appid=${appid}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}&state=STATE#wechat_redirect`;
+        
+        // 执行跳转
+        window.location.href = authUrl;
+    } else {
+        // 场景 C：缓存里有登录标记（从其他页面返回 index.html）
+        // 此时不需要做任何事，直接让用户看页面内容即可
+        console.log("欢迎回来，检测到已登录状态");
+    }
+})();
 </script>
 </html>
