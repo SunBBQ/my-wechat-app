@@ -64,4 +64,19 @@
     <a class="hotspot schedule-card" href="schedule.html" aria-label="查看活动行程"></a>
   </main>
 </body>
+<script>
+  (function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+
+    // 如果没有 code，且在微信环境中，则跳转授权
+    if (!code && /MicroMessenger/i.test(navigator.userAgent)) {
+      const appid = 'wx5d4ebaabb750dae1'; // 你的 appID
+      const redirectUri = encodeURIComponent(window.location.href);
+      const scope = 'snsapi_userinfo';
+
+      window.location.href = `https://open.weixin.qq.com/connect/oauth2/authorize?appid=${appid}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}&state=STATE#wechat_redirect`;
+    }
+  })();
+</script>
 </html>
