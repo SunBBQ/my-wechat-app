@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>微站复现项目</title>
+    <style>
+        body { font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; margin: 0; background: #f5f5f5; }
+        .container { padding: 20px; text-align: center; }
+        /* 微信外遮罩样式 */
+        #wechat-browser-check {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #fff; z-index: 9999; display: none;
+            flex-direction: column; align-items: center; justify-content: center;
+        }
+        .icon-wechat { width: 80px; height: 80px; margin-bottom: 20px; }
+        .btn-auth {
+            background-color: #07c160; color: white; border: none;
+            padding: 12px 24px; border-radius: 8px; font-size: 16px; margin-top: 20px;
+        }
+        #user-info { display: none; margin-top: 50px; }
+        .avatar { width: 100px; height: 100px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body>
+
+    <div id="wechat-browser-check">
+        <img class="icon-wechat" src="https://res.wx.qq.com/a/wx_fed/assets/res/NTI4MWU5.ico" alt="wechat">
+        <h2>请在微信客户端打开</h2>
+        <p style="color: #888;">为了您的账号安全，请通过微信访问该页面</p>
+    </div>
+
+    <div class="container" id="main-content">
+        <div id="loading">正在验证身份...</div>
+
+        <div id="user-info">
+            <img class="avatar" id="user-avatar" src="" alt="avatar">
+            <h3 id="user-nickname">未登录</h3>
+            <div style="background: white; padding: 20px; border-radius: 12px; margin-top: 20px;">
+                <p>恭喜！你已成功复现“仅限微信访问”功能。</p>
+                <p id="code-display" style="font-family: monospace; color: #07c160;"></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            // 1. 硬核环境检查
+            const ua = navigator.userAgent.toLowerCase();
+            const isWechat = ua.indexOf('micromessenger') !== -1;
+
+            if (!isWechat) {
+                // 如果不是微信，强制显示拦截层
+                document.getElementById('wechat-browser-check').style.display = 'flex';
+                document.getElementById('main-content').style.display = 'none';
+                return;
+            }
+
+            // 2. 授权逻辑
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get('code');
+
+            if (!code) {
+                // 如果 URL 里没有 code，说明需要去微信拿 code
+                const appid = 'wx5d4ebaabb750dae1'; // 对应你截图里的 appID
+                // 授权回调地址：必须在你后台配置的域名下
+                const redirectUri = encodeURIComponent(window.location.href);
+                // 构造微信授权链接
+                const authUrl = `https://open.weixin.qq.com/connect/oauth2/authorize?appid=${appid}&redirect_uri=${redirectUri}&response_type=code&scope=snsapi_userinfo&state=STATE#wechat_redirect`;
+
+                // 执行跳转
+                window.location.href = authUrl;
+            } else {
+                // 3. 已经拿到 code，展示结果
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('user-info').style.display = 'block';
+                document.getElementById('code-display').innerText = "当前 Code: " + code;
+
+                // 注意：由于没有后端换取 token，这里展示默认头像
+                document.getElementById('user-avatar').src = "
